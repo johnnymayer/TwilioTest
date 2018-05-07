@@ -4,9 +4,7 @@ using RestSharp;
 using RestSharp.Authenticators;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using Twilio;
-using Twilio.Rest.Api.V2010.Account;
-using Twilio.Types;
+using System.Collections.Generic;
 
 namespace TESTO_TWILIO
 {
@@ -17,34 +15,50 @@ namespace TESTO_TWILIO
             //1
             var client = new RestClient("https://api.twilio.com/2010-04-01");
             //2
-            var request = new RestRequest("Accounts/AC6b52bfb712ad0fbb58799aea43ea5b09/Messages", Method.POST);
+            var request = new RestRequest("Accounts/AC6b52bfb712ad0fbb58799aea43ea5b09/Messages.json", Method.GET);
+            client.Authenticator = new HttpBasicAuthenticator("AC6b52bfb712ad0fbb58799aea43ea5b09", "4608382d073888bb7d31ca6544d4da4b");
             //3
+            var response = new RestResponse();
+
+            Task.Run(async () =>
+            {
+                response = await GetResponseContentAsync(client, request) as RestResponse;
+            }).Wait();
+
             request.AddParameter("To", "+15039335980");
             request.AddParameter("From", "+19715992478");
             request.AddParameter("Body", "Henlo dingdong, this another testo!");
             //4
             client.Authenticator = new HttpBasicAuthenticator("AC6b52bfb712ad0fbb58799aea43ea5b09", "4608382d073888bb7d31ca6544d4da4b");
             //5
-            client.ExecuteAsync(request, response =>
+            JObject jsonResponse = JsonConvert.DeserializeObject<JObject>(response.Content);
+            List<Message> messageList = JsonConvert.DeserializeObject<List<Message>>(jsonResponse["messages"].ToString());
+            foreach(Message message in messageList)
             {
-                Console.WriteLine(response);
-            });
+                Console.WriteLine("To: {0}", message.To);
+                Console.WriteLine("From: {0}", message.From);
+                Console.WriteLine("Body: {0}", message.Body);
+                Console.WriteLine("Status: {0}", message.Status);
+            }
             Console.ReadLine();
         }
 
-        static async Task SendSms()
+        public static Task<IRestResponse> GetResponseContentAsync(RestClient theClient, RestRequest theRequest)
         {
-            var accountSid = "AC6b52bfb712ad0fbb58799aea43ea5b09";
-            var authToken = "4608382d073888bb7d31ca6544d4da4b";
-
-            TwilioClient.Init(accountSid, authToken);
-
-            var message = await MessageResource.CreateAsync(
-                to: new PhoneNumber("+15039335980"),
-                from: new PhoneNumber("+19715992478"),
-                body: "Henlo from c charp, you're really doing it now.");
-
-            Console.WriteLine(message.Sid);
+            var tcs = new TaskCompletionSource<IRestResponse>();
+            theClient.ExecuteAsync(theRequest, response =>
+            {
+                tcs.SetResult(response);
+            });
+            return tcs.Task;
         }
+    }
+
+    public class Message
+    {
+        public string To { get; set; }
+        public string From { get; set; }
+        public string Body { get; set; }
+        public string Status { get; set; }
     }
 }
