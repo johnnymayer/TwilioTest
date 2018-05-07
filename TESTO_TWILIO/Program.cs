@@ -14,10 +14,22 @@ namespace TESTO_TWILIO
     {
         static void Main(string[] args)
         {
-            
-            SendSms().Wait();
-            Console.Write("Press any key to continue.");
-            Console.ReadKey();
+            //1
+            var client = new RestClient("https://api.twilio.com/2010-04-01");
+            //2
+            var request = new RestRequest("Accounts/AC6b52bfb712ad0fbb58799aea43ea5b09/Messages", Method.POST);
+            //3
+            request.AddParameter("To", "+15039335980");
+            request.AddParameter("From", "+19715992478");
+            request.AddParameter("Body", "Henlo dingdong, this another testo!");
+            //4
+            client.Authenticator = new HttpBasicAuthenticator("AC6b52bfb712ad0fbb58799aea43ea5b09", "4608382d073888bb7d31ca6544d4da4b");
+            //5
+            client.ExecuteAsync(request, response =>
+            {
+                Console.WriteLine(response);
+            });
+            Console.ReadLine();
         }
 
         static async Task SendSms()
